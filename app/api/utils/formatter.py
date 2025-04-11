@@ -50,6 +50,19 @@ class ScientificFormatter:
         current_section = "Introdução"
         current_content = []
         
+        # Se o conteúdo estiver vazio, retorne a seção padrão vazia
+        if not content.strip():
+            return {current_section: ""}
+            
+        # Primeiro, vamos pré-processar o texto para encontrar todos os cabeçalhos
+        # Isso é útil para casos onde há apenas cabeçalhos sem conteúdo
+        all_headers = []
+        for line in lines:
+            match = re.match(pattern, line, re.MULTILINE)
+            if match:
+                all_headers.append(match.group(2).strip())
+        
+        # Agora processamos o conteúdo para extrair as seções
         for line in lines:
             match = re.match(pattern, line, re.MULTILINE)
             if match:
@@ -66,9 +79,14 @@ class ScientificFormatter:
         # Adiciona a última seção
         if current_content:
             sections[current_section] = '\n'.join(current_content).strip()
+        
+        # Para cabeçalhos que não tiveram conteúdo associado, adicionamos uma string vazia
+        for header in all_headers:
+            if header not in sections:
+                sections[header] = ""
             
         return sections
-    
+        
     @staticmethod
     def add_scientific_structure(content: str, query: str, citations: List[str]) -> str:
         """
@@ -90,11 +108,11 @@ class ScientificFormatter:
         article_id = str(uuid.uuid4())[:8]
         
         metadata = f"""
-**ID do Artigo**: {article_id}  
-**Data de Publicação**: {current_date}  
-**Método**: Análise sistemática baseada em evidências  
-**Total de Fontes Consultadas**: {len(citations)}
-"""
+    **ID do Artigo**: {article_id}  
+    **Data de Publicação**: {current_date}  
+    **Método**: Análise sistemática baseada em evidências  
+    **Total de Fontes Consultadas**: {len(citations)}
+    """
         
         # Verificar se o conteúdo já contém estrutura de seções ou precisa ser organizado
         has_sections = re.search(r'^#{1,3}\s+', content, re.MULTILINE)
@@ -122,9 +140,10 @@ class ScientificFormatter:
             if not any(s.lower().startswith('conclus') for s in sections.keys()):
                 structured_content += f"## Conclusão\n\nEsta análise demonstra a complexidade e importância do tema abordado, fornecendo uma base sólida para futuras investigações científicas.\n\n"
         else:
-            # Se já tiver seções, apenas adicionar título e metadados
+            # Se já tiver seções, adicionar título e metadados
             if content.startswith('#'):
-                structured_content = f"{content}\n\n"
+                # Se o conteúdo já começa com um título, adicionamos o título personalizado antes
+                structured_content = f"{title}\n\n{metadata}\n\n{content}\n\n"
             else:
                 structured_content = f"{title}\n\n{metadata}\n\n{content}\n\n"
         
@@ -133,7 +152,7 @@ class ScientificFormatter:
         structured_content += citation_text
         
         return structured_content
-    
+
     @staticmethod
     def format_response(response_data: Dict[str, Any], query: str) -> Dict[str, Any]:
         """
@@ -147,6 +166,10 @@ class ScientificFormatter:
             Dict com a resposta formatada.
         """
         try:
+            # Verificar se temos a estrutura esperada de dados
+            if "choices" not in response_data or not response_data.get("choices"):
+                raise ValueError("Resposta da API não contém campo 'choices' válido")
+                
             # Extrair conteúdo e citações
             content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
             citations = response_data.get("citations", [])
@@ -174,16 +197,26 @@ class ScientificFormatter:
             return formatted_response
             
         except Exception as e:
-            # Em caso de erro, retornar o mínimo de dados formatados
+            # Em caso de erro, retornar o mínimo de dados formatados com informação de erro
+            error_message = str(e)
+            
+            # Tentar extrair conteúdo, se disponível
+            content = ""
+            if "choices" in response_data and response_data.get("choices"):
+                content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            
             return {
                 "research_id": response_data.get("research_id", str(uuid.uuid4())),
                 "query": query,
                 "content": content,
                 "raw_content": content,
-                "citations": citations,
-                "usage": usage,
+                "citations": response_data.get("citations", []),
+                "usage": response_data.get("usage", {}),
                 "metadata": {
-                    "error": str(e),
+                    "model": response_data.get("model", ""),
+                    "created": response_data.get("created", ""),
+                    "formatting_timestamp": datetime.now().isoformat(),
+                    "error": error_message,
                     "formatting_failed": True
                 }
             }

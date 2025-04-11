@@ -1,11 +1,48 @@
 import os
+import json
+from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
-# Carregar variáveis do .env se não estiver em produção
-if os.getenv("ENVIRONMENT") != "production":
-    load_dotenv()
+# Constantes para acesso a secrets
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+SECRETS_DIR = os.getenv("SECRETS_DIR", "/run/secrets")  # Diretório padrão para secrets montados no Cloud Run
+
+def get_secret(secret_name: str) -> str:
+    """
+    Obtém um valor de secret do Cloud Run em produção ou do .env em desenvolvimento.
+    
+    Args:
+        secret_name: Nome do secret a ser obtido
+        
+    Returns:
+        Valor do secret ou string vazia se não encontrado
+    """
+    # Em produção, tenta ler do sistema de secrets do Cloud Run
+    if ENVIRONMENT == "production":
+        secret_path = Path(f"{SECRETS_DIR}/{secret_name}")
+        if secret_path.exists():
+            return secret_path.read_text().strip()
+            
+        # Alternativa: alguns secrets são montados como JSON
+        secret_json_path = Path(f"{SECRETS_DIR}/{secret_name}.json")
+        if secret_json_path.exists():
+            try:
+                return json.loads(secret_json_path.read_text())["value"]
+            except (json.JSONDecodeError, KeyError):
+                pass
+                
+    # Em desenvolvimento, carrega do .env
+    if ENVIRONMENT != "production":
+        if not os.path.isfile('.env') and os.path.isfile('.env.example'):
+            print("AVISO: Arquivo .env não encontrado. Usando .env.example")
+            load_dotenv('.env.example')
+        else:
+            load_dotenv()
+            
+    # Retornar valor da variável de ambiente ou vazio
+    return os.getenv(secret_name, "")
 
 class Settings(BaseSettings):
     """Configurações da aplicação."""
@@ -13,10 +50,10 @@ class Settings(BaseSettings):
     # Configurações gerais
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "Sciflow Deep Research API"
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+    ENVIRONMENT: str = ENVIRONMENT
     
     # Configurações da API Perplexity
-    PERPLEXITY_API_KEY: str = os.getenv("PERPLEXITY_API_KEY", "")
+    PERPLEXITY_API_KEY: str = get_secret("PERPLEXITY_API_KEY")
     PERPLEXITY_API_URL: str = "https://api.perplexity.ai/chat/completions"
     PERPLEXITY_MODEL: str = "sonar-deep-research"
     
@@ -40,7 +77,7 @@ class Settings(BaseSettings):
     MAX_TOKEN_LIMIT: int = 8000  # Limite alto para artigos científicos longos
     
     # Configurações de timeout e retry
-    REQUEST_TIMEOUT_SECONDS: int = 120
+    REQUEST_TIMEOUT_SECONDS: int = 2490
     MAX_RETRIES: int = 3
     RETRY_BACKOFF_FACTOR: float = 2.0
 

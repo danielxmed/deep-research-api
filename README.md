@@ -34,7 +34,7 @@ A Sciflow Deep Research API é uma aplicação FastAPI projetada para realizar p
 
 1. Clone o repositório:
     ```bash
-    git clone https://github.com/danielxmed/sciflow-deepresearch-api.git
+    git clone https://github.com/seu-usuario/sciflow-deepresearch-api.git
     cd sciflow-deepresearch-api
     ```
 
@@ -145,14 +145,29 @@ POST /api/v1/research/deep-research
     gcloud builds submit --tag gcr.io/[SEU_ID_DO_PROJETO]/sciflow-deepresearch-api
     ```
 
-3. Implante no Cloud Run:
+3. Crie um secret no Secret Manager:
+    ```bash
+    # Criar o secret
+    gcloud secrets create perplexity-api-key --replication-policy="automatic"
+    
+    # Adicionar a versão do secret com o valor da chave
+    echo -n "sua_chave_api_perplexity" | gcloud secrets versions add perplexity-api-key --data-file=-
+    
+    # Conceder permissão para a conta de serviço do Cloud Run acessar o secret
+    gcloud secrets add-iam-policy-binding perplexity-api-key \
+      --member="serviceAccount:SERVICE_ACCOUNT_EMAIL" \
+      --role="roles/secretmanager.secretAccessor"
+    ```
+
+4. Implante no Cloud Run com o secret:
     ```bash
     gcloud run deploy sciflow-deepresearch-api \
       --image gcr.io/[SEU_ID_DO_PROJETO]/sciflow-deepresearch-api \
       --platform managed \
       --allow-unauthenticated \
       --region us-central1 \
-      --set-env-vars "PERPLEXITY_API_KEY=[SUA_CHAVE_API]"
+      --set-env-vars "ENVIRONMENT=production" \
+      --update-secrets="PERPLEXITY_API_KEY=perplexity-api-key:latest"
     ```
 
 ## 📝 Licença
@@ -171,4 +186,4 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull re
 
 ## 📞 Contato
 
-Para dúvidas ou sugestões, entre em contato pelo email: [contato@nobgregamedtech.com.br]
+Para dúvidas ou sugestões, entre em contato pelo email: [seu-email@exemplo.com]
