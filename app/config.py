@@ -56,6 +56,8 @@ class Settings(BaseSettings):
     PERPLEXITY_API_KEY: str = get_secret("PERPLEXITY_API_KEY")
     PERPLEXITY_API_URL: str = "https://api.perplexity.ai/chat/completions"
     PERPLEXITY_MODEL: str = "sonar-deep-research"
+    SCIFLOW_API_KEY: str = get_secret("SCIFLOW_API_KEY")
+
     
     # Validação da chave da API Perplexity
     @field_validator("PERPLEXITY_API_KEY")

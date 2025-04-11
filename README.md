@@ -84,27 +84,9 @@ docker run -p 8080:8080 --env-file .env sciflow-deepresearch-api
 
 ## 📚 Uso da API
 
-### Endpoint de Pesquisa Profunda
-
-```http
 POST /api/v1/research/deep-research
-```
-
-#### Corpo da requisição
-
-```json
-{
-  "query": "Impacto da IA no mercado de trabalho global na próxima década",
-  "system_prompt": "Você é um assistente de pesquisa acadêmica focado em produzir análises científicas profundas...",
-  "options": {
-    "temperature": 0.1,
-    "top_p": 0.95,
-    "search_recency_filter": "month",
-    "frequency_penalty": 1.0,
-    "web_search_context_size": "high"
-  }
-}
-```
+X-API-Key: sua_chave_api_sciflow
+Content-Type: application/json
 
 #### Resposta
 

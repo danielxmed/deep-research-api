@@ -4,12 +4,14 @@ from typing import Dict, Any, Optional
 import time
 import asyncio
 import uuid
-from datetime import datetime
 import os
+from datetime import datetime
+
 from app.config import settings
 from app.api.models.research import DeepResearchRequest, DeepResearchResponse, ErrorResponse
 from app.api.utils.perplexity import PerplexityClient, PerplexityApiException
 from app.api.utils.formatter import ScientificFormatter
+from app.api.utils.auth import verify_api_key
 
 # Criar router
 router = APIRouter()
@@ -87,10 +89,12 @@ async def log_request(request_data: Dict[str, Any], response_data: Dict[str, Any
     summary="Realizar pesquisa científica profunda",
     description="Endpoint para realizar pesquisa científica profunda usando o modelo Sonar Deep Research da Perplexity AI."
 )
+
 async def deep_research(
     request: DeepResearchRequest,
     background_tasks: BackgroundTasks,
-    _: bool = Depends(rate_limit_check)
+    _rate_limit: bool = Depends(rate_limit_check),
+    _api_key: bool = Depends(verify_api_key)
 ) -> Dict[str, Any]:
     """
     Endpoint para realizar pesquisa científica profunda.
