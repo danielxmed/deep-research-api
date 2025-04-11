@@ -34,7 +34,7 @@ A Sciflow Deep Research API é uma aplicação FastAPI projetada para realizar p
 
 1. Clone o repositório:
     ```bash
-    git clone https://github.com/seu-usuario/sciflow-deepresearch-api.git
+    git clone https://github.com/danielxmed/sciflow-deepresearch-api.git
     cd sciflow-deepresearch-api
     ```
 
@@ -186,4 +186,4 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull re
 
 ## 📞 Contato
 
-Para dúvidas ou sugestões, entre em contato pelo email: [seu-email@exemplo.com]
+Para dúvidas ou sugestões, entre em contato pelo email: [daniel@nobregamedtech.com.br]
