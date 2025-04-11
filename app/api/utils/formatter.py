@@ -172,7 +172,38 @@ class ScientificFormatter:
                 
             # Extrair conteúdo e citações
             content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            citations = response_data.get("citations", [])
+            
+            # DEBUG: Verificar estrutura completa para encontrar onde estão as citações
+            print("DEBUG - Estrutura da resposta para citações:")
+            # Verificar todas as chaves de primeiro nível na resposta
+            print(f"Chaves na resposta: {list(response_data.keys())}")
+            
+            # Verificar diferentes locais possíveis para as citações
+            citations = []
+            if "citations" in response_data:
+                # Formato direto
+                citations = response_data.get("citations", [])
+                print(f"Citações encontradas no nível superior: {len(citations)}")
+            elif "message" in response_data and "citations" in response_data.get("message", {}):
+                # Algumas APIs colocam citações dentro da mensagem
+                citations = response_data.get("message", {}).get("citations", [])
+                print(f"Citações encontradas dentro da mensagem: {len(citations)}")
+            elif "choices" in response_data and response_data.get("choices") and "citations" in response_data.get("choices", [{}])[0]:
+                # Outra possibilidade é dentro do primeiro item de choices
+                citations = response_data.get("choices", [{}])[0].get("citations", [])
+                print(f"Citações encontradas dentro do primeiro choice: {len(citations)}")
+            else:
+                # Se não encontrar nenhuma citação, tentar extrair da mensagem
+                try:
+                    # Tenta encontrar citações no formato [1], [2] no conteúdo
+                    citation_pattern = r'\[(\d+)\]\s+(http[s]?://[^\s]+)'
+                    citation_matches = re.findall(citation_pattern, content)
+                    if citation_matches:
+                        citations = [url for _, url in citation_matches]
+                        print(f"Citações extraídas do conteúdo: {len(citations)}")
+                except Exception as e:
+                    print(f"Erro ao tentar extrair citações do conteúdo: {str(e)}")
+            
             usage = response_data.get("usage", {})
             research_id = response_data.get("research_id", str(uuid.uuid4()))
             

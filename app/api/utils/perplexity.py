@@ -80,6 +80,7 @@ class PerplexityClient:
         
         # Configurar opções padrão se não fornecidas
         options = request.options or PerplexityRequestOptions()
+    
         
         # Construir o payload base
         payload = {
@@ -91,23 +92,27 @@ class PerplexityClient:
             "presence_penalty": options.presence_penalty,
             "max_tokens": settings.MAX_TOKEN_LIMIT,
             "stream": False,
-            "web_search_options": {"search_context_size": options.web_search_context_size}
+            # CORREÇÃO: Adicionar flag explícita para pesquisa na web
+            "use_web_search": True,
+            "web_search_options": {
+                "search_context_size": options.web_search_context_size,
+                "include_citations": True  # Adicionar flag explícita para incluir citações
+            }
         }
-        
-        # Adicionar filtros opcionais se fornecidos
-        if options.search_domain_filter:
-            payload["search_domain_filter"] = options.search_domain_filter
             
+        # Adicionar filtro de recência se fornecido
         if options.search_recency_filter:
             payload["search_recency_filter"] = options.search_recency_filter
             
         return payload
-    
+            
     @retry(
         retry=retry_if_exception_type((httpx.RequestError, asyncio.TimeoutError)),
         stop=stop_after_attempt(settings.MAX_RETRIES),
         wait=wait_exponential(multiplier=settings.RETRY_BACKOFF_FACTOR)
     )
+  # Modificação na função execute_research em app/api/utils/perplexity.py
+
     async def execute_research(self, request: DeepResearchRequest) -> Dict[str, Any]:
         """
         Executa uma pesquisa profunda usando a API Perplexity.
@@ -124,6 +129,10 @@ class PerplexityClient:
         payload = self._prepare_payload(request)
         headers = self._prepare_headers()
         
+        # Log completo do payload para debug
+        print("DEBUG - Payload enviado para Perplexity API:")
+        print(json.dumps(payload, indent=2))
+        
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -138,11 +147,22 @@ class PerplexityClient:
                 # Processar a resposta
                 result = response.json()
                 
+                # Log completo da resposta para debug
+                print("DEBUG - Resposta bruta da Perplexity API:")
+                print(json.dumps(result, indent=2))
+                
+                # Verificar explicitamente se há citações
+                if "citations" not in result or not result.get("citations"):
+                    print("AVISO: Nenhuma citação foi encontrada na resposta da API")
+                else:
+                    print(f"Citações encontradas: {len(result.get('citations'))}")
+                
                 # Adicionar ID único
                 result["research_id"] = str(uuid.uuid4())
                 
                 return result
                 
+
         except httpx.HTTPStatusError as e:
             # Tentar extrair detalhes do erro da resposta
             error_message = "Erro na API Perplexity"

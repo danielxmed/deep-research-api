@@ -53,7 +53,5 @@ coverage.xml
 *~
 .DS_Store
 
-tmp
-run
 saida.txt
 code_scrapper.py

@@ -29,7 +29,10 @@ class PerplexityRequestOptions(BaseModel):
     """Opções para personalizar a requisição à API Perplexity."""
     temperature: float = Field(default=0.1, ge=0.0, lt=2.0, description="Controla a aleatoriedade da resposta")
     top_p: float = Field(default=0.95, ge=0.0, le=1.0, description="Limiar de amostragem de núcleo para controlar a diversidade")
-    search_domain_filter: Optional[List[str]] = Field(default=None, description="Lista de domínios para filtrar resultados de pesquisa")
+    search_domain_filter: Optional[List[str]] = Field(
+        default=None, 
+        description="Lista de domínios para filtrar resultados de pesquisa. Nota: Sempre serão usados domínios médicos confiáveis independentemente deste valor."
+    )
     search_recency_filter: Optional[RecencyFilter] = Field(default=None, description="Filtro de recência para resultados de pesquisa")
     frequency_penalty: float = Field(default=1.0, ge=0.0, le=2.0, description="Penalidade para tokens frequentes")
     presence_penalty: float = Field(default=0.0, ge=0.0, le=2.0, description="Penalidade para tokens já presentes")
@@ -37,16 +40,23 @@ class PerplexityRequestOptions(BaseModel):
     
     @model_validator(mode='after')
     def validate_domain_filter(self):
-        """Validar o filtro de domínio para garantir que não exceda o limite de 3."""
-        if self.search_domain_filter and len(self.search_domain_filter) > 3:
-            raise ValueError("O filtro de domínio está limitado a 3 domínios")
+        """Validar o filtro de domínio."""
+        # Domínios sempre serão sobrescritos por uma lista fixa de domínios médicos confiáveis
         return self
 
 
 class DeepResearchRequest(BaseModel):
     """Modelo para solicitações de pesquisa profunda."""
     query: str = Field(..., min_length=5, max_length=500, description="Consulta de pesquisa")
-    system_prompt: Optional[str] = Field(default="Você é um assistente de pesquisa acadêmica focado em produzir análises científicas profundas e extensas. Elabore respostas detalhadas, bem estruturadas e com fundamentação sólida, organizadas em seções claras com títulos e subtítulos. Priorize informações factuais baseadas em evidências. Inclua dados estatísticos relevantes e cite todas as fontes. Apresente múltiplas perspectivas quando apropriado. Sua resposta deve ter o formato de um artigo científico completo, com introdução, metodologia (quando aplicável), resultados, discussão e conclusão.", description="Instrução de sistema para guiar o comportamento do modelo")
+    system_prompt: Optional[str] = Field(default="""Você é um assistente de pesquisa acadêmica focado em produzir análises científicas profundas e 
+                                         extensas com base na literatura MÉDICA. Portanto, busque APENAS em sites oficiais de revistas médicas ou compiladores, 
+                                         como Pubmed, Scielo, NEJM, etc. Elabore respostas detalhadas, bem estruturadas e com fundamentação sólida, organizadas 
+                                         em seções claras com títulos e subtítulos. Use exclusivamente informações factuais baseadas em evidências. Inclua dados 
+                                         estatísticos relevantes e cite todas as fontes. Apresente múltiplas perspectivas quando apropriado. Sua resposta deve ter 
+                                         o formato de um artigo científico completo do tipo revisão sistemática de literatura, com introdução, metodologia (quando aplicável), 
+                                         resultados, discussão e conclusão. Atenção: você só deve pesquisar em fontes que contenham 
+                                         artigos científicos e diretrizes médicas - não use nenhum site leigo. Caso a pesquisa retorne sites não científicos, você
+                                         deve ativamente excluí-los da resposta final.""", description="Instrução de sistema para guiar o comportamento do modelo")
     options: Optional[PerplexityRequestOptions] = Field(default=None, description="Opções para personalizar a solicitação")
 
 
